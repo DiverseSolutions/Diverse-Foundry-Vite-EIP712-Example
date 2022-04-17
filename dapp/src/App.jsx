@@ -1,41 +1,58 @@
-import { useState } from 'react'
+// import { useState } from 'react'
+import { ethers } from "ethers";
+
 import logo from './logo.svg'
 import './App.css'
 
 function App() {
-  const [count, setCount] = useState(0)
+
+  async function handleSigning(){
+    if (typeof window.ethereum !== 'undefined') {
+      const provider = new ethers.providers.Web3Provider(window.ethereum)
+      await provider.send("eth_requestAccounts", []);
+      const signer = provider.getSigner()
+
+      const domain = {
+        name: 'ERC712 Example',
+        version: '1',
+        chainId: 80001,
+        verifyingContract: '0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC'
+      };
+
+      const types = {
+        set: [
+          { name: 'sender', type: 'address' },
+          { name: 'x', type: 'uint' },
+        ],
+      };
+
+      const value = {
+          sender: window.ethereum.selectedAddress,
+          x: 10,
+      };
+
+
+      let hashData = ethers.utils._TypedDataEncoder.hash(domain,types,value)
+
+      let signature = await signer._signTypedData(domain,types,value);
+      let recoveredAddress = ethers.utils.recoverAddress(hashData,signature)
+
+      console.log(ethers.utils.getAddress(await signer.getAddress()))
+      console.log(ethers.utils.getAddress(recoveredAddress))
+
+      console.log(ethers.utils.splitSignature(signature))
+    }else{
+      alert("Metamask Not Available")
+    }
+  }
 
   return (
     <div className="App">
       <header className="App-header">
         <img src={logo} className="App-logo" alt="logo" />
-        <p>Hello Vite + React!</p>
+        <p>Foundry + Vite : ERC712 Example</p>
         <p>
-          <button type="button" onClick={() => setCount((count) => count + 1)}>
-            count is: {count}
-          </button>
-        </p>
-        <p>
-          Edit <code>App.jsx</code> and save to test HMR updates.
-        </p>
-        <p>
-          <a
-            className="App-link"
-            href="https://reactjs.org"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Learn React
-          </a>
-          {' | '}
-          <a
-            className="App-link"
-            href="https://vitejs.dev/guide/features.html"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Vite Docs
-          </a>
+          <button type="button" onClick={() => handleSigning() }> Sign Data </button>
         </p>
       </header>
     </div>
